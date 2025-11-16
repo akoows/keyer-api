@@ -9,6 +9,8 @@ datasource db {
 
 model User {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  admin     Boolean  @default(false)
+  picture   String   @default("https://res.cloudinary.com/dylkeqcms/image/upload/v1762125098/default_uqhrk3.jpg")
   email     String   @unique
   name      String
   password  String
