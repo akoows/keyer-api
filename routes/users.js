@@ -6,6 +6,7 @@ import multer from 'multer';
 import streamifier from 'streamifier';
 import { v2 as cloudinary } from 'cloudinary';
 import { PrismaClient } from '@prisma/client';
+import nodemailer from 'nodemailer';
 
 // Importando middlewares
 import auth from '../middlewares/auth.js';
@@ -16,6 +17,26 @@ const router = express.Router();
 const prisma = new PrismaClient();
 const upload = multer({ storage: multer.memoryStorage() });
 const JWT_SECRET = process.env.JWT_SECRET;
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.GOOGLE_EMAIL,
+    pass: process.env.GOOGLE_PASSWORD,
+  },
+});
+
+// Variaveis de arquivo
+let validationTokens = [];
+
+// Criar mensagem para o email
+function createMessage(reciver, token){
+    var message = {
+        from: process.env.GOOGLE_EMAIL,
+        to: reciver,
+        subject: "Keyer - Verification Code",
+        text: "Seu código de verificação é: " + token
+    };
+}
 
 // Endpoint de registro
 router.post('/register', async (req, res) => {
