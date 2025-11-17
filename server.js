@@ -2,7 +2,7 @@ import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import usersRoute from './routes/users.js';
-import privateRoutes from './routes/private.js';
+import utilitiesRoutes from './routes/utilities.js';
 import { v2 as cloudinary } from 'cloudinary';
 
 import auth from './middlewares/auth.js';
@@ -22,7 +22,7 @@ app.use(cors({
 }))
 
 app.use('/users', usersRoute); // Users Route
-app.use('/', privateRoutes); // Private Routes
+app.use('/', utilitiesRoutes); // Private Routes
 
 app.listen(process.env.PORT, () => {
     console.log(`Server is running on http://localhost:${process.env.PORT}`);

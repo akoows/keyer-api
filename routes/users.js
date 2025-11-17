@@ -59,6 +59,8 @@ router.post('/login', async (req, res) => {
     }
 });
 
+// 2FA Verification
+
 // List - Admin only
 router.get('/list', admin, async (req, res) => {
     try {
