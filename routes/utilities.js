@@ -1,21 +1,20 @@
+// Importando bibliotecas
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
 
+// Instanciando apps
 const router = express.Router()
 const prisma = new PrismaClient();
 
-import admin from '../middlewares/admin.js';
-
+// Endpoint de status do server
 router.get('/status', async (req, res) => {
-    const users = await prisma.user.count();
+    const users = await prisma.user.count(); // Contando os usuarios cadastrados no DB
 
-    console.log(users)
-
-    res.json({
-        status: 'online',
-        uptime: process.uptime(),
-        users: users,
+    res.json({ // Resposta do Status
+        status: 'online', // Status
+        uptime: process.uptime(), // Tempo online
+        users: users, // Contagem de usuarios
     });
 })
 
-export default router;
+export default router; // Exportando o router

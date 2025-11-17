@@ -1,3 +1,4 @@
+// Importando bibliotecas
 import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
@@ -6,114 +7,116 @@ import streamifier from 'streamifier';
 import { v2 as cloudinary } from 'cloudinary';
 import { PrismaClient } from '@prisma/client';
 
+// Importando middlewares
 import auth from '../middlewares/auth.js';
 import admin from '../middlewares/admin.js';
 
+// Variaveis de ambiente & apps
 const router = express.Router();
 const prisma = new PrismaClient();
 const upload = multer({ storage: multer.memoryStorage() });
 const JWT_SECRET = process.env.JWT_SECRET;
 
-// Register
+// Endpoint de registro
 router.post('/register', async (req, res) => {
-    const user = req.body;
+    const user = req.body; // Pegando o usuario da requisição
 
-    const salt = await bcrypt.genSalt(10);
-    const hashPassword = await bcrypt.hash(user.password, salt);
+    const salt = await bcrypt.genSalt(10); // Gerando salt
+    const hashPassword = await bcrypt.hash(user.password, salt); // Encripitando a senha
 
     try {
-        const userDB = await prisma.user.create({
+        const userDB = await prisma.user.create({ // Criando o user no DB
             data: {
                 name: user.name,
                 email: user.email,
                 password: hashPassword
             }
         });
-        res.status(201).json(userDB);
-    } catch (error) {
-        res.status(500).json({ error: 'Erro no servidor!' });
+        res.status(201).json(userDB); // retornando o usuario
+    } catch (error) { // Se não funcionar
+        res.status(500).json({ error: 'Erro no servidor!' }); // Retonar erro 500, erro no servidor
     }
 });
 
-// Login
+// Endpoint de Login
 router.post('/login', async (req, res) => {
     try {
         const { email, password } = req.body; // Pegando as informações do DB
         const user = await prisma.user.findUnique({ where: { email: email } }) // achando no DB
 
         if (!user) {  // Se não existir o usuario
-            res.status(404).json({ message: 'Usuario não encontrado!' })
+            res.status(404).json({ message: 'Usuario não encontrado!' }) // Retornar erro 404
         };
 
         const passCompare = await bcrypt.compare(password, user.password); // Comparando a senha com o hash
 
         if (!passCompare) { /// Caso a senha esteja errada
-            res.status(400).json({ message: 'Senha Incorreta!' })
+            res.status(400).json({ message: 'Senha Incorreta!' }) // Aviso de senha incorreta
         }
 
         const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: '7d' }); //Gerar JWT
 
         res.status(200).json(token); // Retornando o token
-    } catch (error) {
-        res.status(500).json({ error: 'Erro no servidor!' });
+    } catch (error) { // Caso não funcione
+        res.status(500).json({ error: 'Erro no servidor!' }); // Retornando o erro 500, erro no servidor
     }
 });
 
-// 2FA Verification
+// Verificação de Dois Fatores
 
-// List - Admin only
+// Endpoint de Listar usuarios - Somente Admnistradores
 router.get('/list', admin, async (req, res) => {
     try {
-        const users = await prisma.user.findMany({
-            omit: {
-                password: true
+        const users = await prisma.user.findMany({ // Achando os usuarios no DB
+            omit: { // Omitir informações
+                password: true // Omitindo senha
             }
         });
 
-        res.status(200).json({ messasge: 'Listado usuarios com sucesso!', users })
-    } catch (error) {
-        res.status(500).json({ error: 'Erro no servidor!' });
+        res.status(200).json({ messasge: 'Listado usuarios com sucesso!', users }) // Retornando os usuarios
+    } catch (error) { // Caso não funcione
+        res.status(500).json({ error: 'Erro no servidor!' }); // Retornando erro 500, erro no servidor
     }
 });
 
-// List user by ID - Admin only
+// Endpoint para listar usuarios pelo ID - Somente Adiministradores
 router.post('/list/:id', admin, async (req, res) => {
-    const { id } = req.params;
+    const { id } = req.params; // Pegando o ID dos Parametros
 
     try {
-        const user = await prisma.user.findUnique({ where: { id: parseInt(id) }, omit: { password: true }});
-    } catch (error) {
-        res.status(500).json({ error: 'Erro no servidor!' });
+        const user = await prisma.user.findUnique({ where: { id: parseInt(id) }, omit: { password: true }}); // Achando usuario no DB pelo ID
+    } catch (error) { // Caso não funcione
+        res.status(500).json({ error: 'Erro no servidor!' }); // Retornando erro 500, erro no servidor
     }
 });
 
-//Delete user - Admin only
+// Endpoint de deletar usuarios pelo ID - Somente Adiministradores
 router.delete('/:id', admin, async (req, res) => {
-    const { id } = req.params;
+    const { id } = req.params; // Pegando o ID na requisição
 
     try {
-        const deletedUser = await prisma.user.delete({ where: { id: id }});
-        res.status(200).json({ message: 'Usuario deletado com sucesso!', deletedUser });
-    } catch (error) {
-        res.status(500).json({ error: 'Erro no servidor!' });
+        const deletedUser = await prisma.user.delete({ where: { id: id }}); // Pegando o usuario que vai ser deletado
+        res.status(200).json({ message: 'Usuario deletado com sucesso!', deletedUser }); // Caso seja deletado, retornar mensagem e o usuario deletado
+    } catch (error) { // Caso não funcione
+        res.status(500).json({ error: 'Erro no servidor!' }); // Retornar erro 500, erro no servidor
     }
 });
 
-// Upload user avatar
+// Endpoint para fazer upload do avatar do usuario
 router.post('/:id/avatar', auth, upload.single('file'), async (req, res) => {
-    const { id } = req.params;
+    const { id } = req.params; // Pegando o ID do usuario da requisição
 
     try {
-        if (!req.file)
-            return res.status(400).json({ message: 'Nenhum arquivo enviado!' });
+        if (!req.file) // Caso o arquivo não exista
+            return res.status(400).json({ message: 'Nenhum arquivo enviado!' }); // Mensagem de erro
 
         const streamUpload = (req) => {
             return new Promise((resolve, reject) => {
                 const stream = cloudinary.uploader.upload_stream(
-                    { folder: "keyer_pfp" },
+                    { folder: "keyer_pfp" }, // Definindo pasta do CLoudinary
                     (error, result) => {
                         if (result) resolve(result);
-                        else reject(error);
+                        else reject(error); // Caso de erro
                     }
                 );
 
@@ -121,25 +124,22 @@ router.post('/:id/avatar', auth, upload.single('file'), async (req, res) => {
             });
         };
 
-        // Aguarda o upload terminar
-        const result = await streamUpload(req);
+        const result = await streamUpload(req); // Aguarda o upload terminar
 
-        // Atualiza o usuário com a URL do Cloudinary
-        const user = await prisma.user.update({
-            where: { id: id },
-            data: { picture: result.secure_url }
+        const user = await prisma.user.update({ // Atualiza o usuário com a URL do Cloudinary
+            where: { id: id }, // ID do usuario
+            data: { picture: result.secure_url } // URL Segura
         });
 
-        res.json({
+        res.json({ // Resposta
             message: "Upload realizado com sucesso!",
             url: result.secure_url,
             public_id: result.public_id
         });
 
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Erro ao enviar imagem para o Cloudinary!' });
+    } catch (error) { // Caso não funcione
+        res.status(500).json({ message: 'Erro ao enviar imagem para o Cloudinary!' }); // Mensagem de erro no server 500
     }
 });
 
-export default router;
+export default router; // Exportando o router
