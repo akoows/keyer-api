@@ -43,7 +43,7 @@ function generateToken() {
 // Função de enviar email
 function sendEmail(uEmail, token) {
     const mailOptions = {
-        from: process.env.GOOGLE_EMAIL,
+        from: `Key Author - 2FA <${process.env.GOOGLE_EMAIL}>`,
         to: uEmail,
         subject: 'Key Author – Verificação de Duas Etapas',
         html: `
