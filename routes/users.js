@@ -18,24 +18,44 @@ const prisma = new PrismaClient();
 const upload = multer({ storage: multer.memoryStorage() });
 const JWT_SECRET = process.env.JWT_SECRET;
 const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.GOOGLE_EMAIL,
-    pass: process.env.GOOGLE_PASSWORD,
-  },
+    service: 'gmail',
+    auth: {
+        user: process.env.GOOGLE_EMAIL,
+        pass: process.env.GOOGLE_PASSWORD
+    }
 });
 
 // Variaveis de arquivo
 let validationTokens = [];
 
-// Criar mensagem para o email
-function createMessage(reciver, token){
-    var message = {
+// Gerar token
+function generateToken() {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let token = '';
+
+  for (let i = 0; i < 6; i++) {
+    token += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+
+  return token;
+}
+
+// Função de enviar email
+function sendEmail(uEmail, token) {
+    const mailOptions = {
         from: process.env.GOOGLE_EMAIL,
-        to: reciver,
-        subject: "Keyer - Verification Code",
-        text: "Seu código de verificação é: " + token
+        to: uEmail,
+        subject: 'Keyer - Verificação de Duas Etapas',
+        text: 'Seu codigo é: ' + token
     };
+
+    transporter.sendMail(mailOptions, (error, info) => {
+        if (error) {
+            console.log('Erro:', error);
+        } else {
+            console.log('Email enviado:', info.response);
+        }
+    });
 }
 
 // Endpoint de registro
@@ -53,16 +73,29 @@ router.post('/register', async (req, res) => {
                 password: hashPassword
             }
         });
+
+        try { // Gerando e enviando token
+            let token = generateToken() // Gerando token
+            let obj = { id: userDB.id, token }
+
+            validationTokens.push(obj)
+            sendEmail(user.email, token)
+        } catch (error) {
+            res.status(500).json({ error: 'Erro no servidor!' }); // Retonar erro 500, erro no servidor
+        }
+
         res.status(201).json(userDB); // retornando o usuario
     } catch (error) { // Se não funcionar
         res.status(500).json({ error: 'Erro no servidor!' }); // Retonar erro 500, erro no servidor
     }
+
+    
 });
 
 // Endpoint de Login
 router.post('/login', async (req, res) => {
     try {
-        const { email, password } = req.body; // Pegando as informações do DB
+        const { email, password } = req.body; // Pegando as informações da requisição
         const user = await prisma.user.findUnique({ where: { email: email } }) // achando no DB
 
         if (!user) {  // Se não existir o usuario
@@ -84,6 +117,42 @@ router.post('/login', async (req, res) => {
 });
 
 // Verificação de Dois Fatores
+router.post('/2fa', async (req, res) => {
+    const { uID, token } = req.body;
+
+    if (!uID || !token) {
+        return res.status(400).json({ message: 'Dados ausentes!' });
+    }
+
+    // buscar token salvo no array
+    const uObj = validationTokens.find(u => u.id === uID);
+
+    if (!uObj) {
+        return res.status(400).json({ message: 'Token inválido!' });
+    }
+
+    // comparar token
+    if (uObj.token !== token) {
+        return res.status(400).json({ message: 'Token incorreto!' });
+    }
+
+    try {
+        // atualizar usuário
+        await prisma.user.update({
+            where: { id: uID },
+            data: { twofa: true }
+        });
+
+        // remover token usado
+        validationTokens = validationTokens.filter(u => u.id !== uID);
+
+        return res.status(200).json({ message: '2FA verificado com sucesso!' });
+
+    } catch (error) {
+        return res.status(500).json({ error: 'Erro ao atualizar usuário!' });
+    }
+});
+
 
 // Endpoint de Listar usuarios - Somente Admnistradores
 router.get('/list', admin, async (req, res) => {
@@ -105,7 +174,7 @@ router.post('/list/:id', admin, async (req, res) => {
     const { id } = req.params; // Pegando o ID dos Parametros
 
     try {
-        const user = await prisma.user.findUnique({ where: { id: parseInt(id) }, omit: { password: true }}); // Achando usuario no DB pelo ID
+        const user = await prisma.user.findUnique({ where: { id: parseInt(id) }, omit: { password: true } }); // Achando usuario no DB pelo ID
     } catch (error) { // Caso não funcione
         res.status(500).json({ error: 'Erro no servidor!' }); // Retornando erro 500, erro no servidor
     }
@@ -116,7 +185,7 @@ router.delete('/:id', admin, async (req, res) => {
     const { id } = req.params; // Pegando o ID na requisição
 
     try {
-        const deletedUser = await prisma.user.delete({ where: { id: id }}); // Pegando o usuario que vai ser deletado
+        const deletedUser = await prisma.user.delete({ where: { id: id } }); // Pegando o usuario que vai ser deletado
         res.status(200).json({ message: 'Usuario deletado com sucesso!', deletedUser }); // Caso seja deletado, retornar mensagem e o usuario deletado
     } catch (error) { // Caso não funcione
         res.status(500).json({ error: 'Erro no servidor!' }); // Retornar erro 500, erro no servidor
