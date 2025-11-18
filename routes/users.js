@@ -30,14 +30,14 @@ let validationTokens = [];
 
 // Gerar token
 function generateToken() {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  let token = '';
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let token = '';
 
-  for (let i = 0; i < 6; i++) {
-    token += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
+    for (let i = 0; i < 6; i++) {
+        token += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
 
-  return token;
+    return token;
 }
 
 // Função de enviar email
@@ -45,9 +45,53 @@ function sendEmail(uEmail, token) {
     const mailOptions = {
         from: process.env.GOOGLE_EMAIL,
         to: uEmail,
-        subject: 'Keyer - Verificação de Duas Etapas',
-        text: 'Seu codigo é: ' + token
+        subject: 'Key Author – Verificação de Duas Etapas',
+        html: `
+    <div style="
+        background-color: #0d0d0d;
+        padding: 40px;
+        border-radius: 12px;
+        max-width: 500px;
+        margin: auto;
+        font-family: Arial, sans-serif;
+        color: #e5e5e5;
+        border: 1px solid #1a1a1a;
+    ">
+        <div style="text-align:center;">
+            <img src="https://res.cloudinary.com/dylkeqcms/image/upload/v1763439107/logo_n06sx4.png" style="width: 140px; margin-bottom: 15px;">
+            <h2 style="color: #e53935; margin-bottom: 10px; font-weight: 700;">
+                Verificação de Segurança
+            </h2>
+        </div>
+
+        <p style="font-size: 15px; line-height: 1.5; color: #ccc;">
+            Olá! Para continuar seu acesso à <strong>Key Author</strong>, insira o código abaixo no aplicativo:
+        </p>
+
+        <div style="
+            text-align: center;
+            margin: 25px 0;
+            padding: 18px 0;
+            font-size: 34px;
+            font-weight: bold;
+            letter-spacing: 8px;
+            background-color: #111;
+            border-radius: 10px;
+            border: 1px solid #2a2a2a;
+            color: #e53935;
+            box-shadow: 0 0 10px rgba(229,57,53,0.3);
+        ">
+            ${token}
+        </div>
+
+        <p style="text-align:center; font-size: 12px; color: #555;">
+            © ${new Date().getFullYear()} Key Author  
+            <br>Todos os direitos reservados.
+        </p>
+    </div>
+    `
     };
+
 
     transporter.sendMail(mailOptions, (error, info) => {
         if (error) {
@@ -89,7 +133,7 @@ router.post('/register', async (req, res) => {
         res.status(500).json({ error: 'Erro no servidor!' }); // Retonar erro 500, erro no servidor
     }
 
-    
+
 });
 
 // Endpoint de Login
