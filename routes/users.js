@@ -97,7 +97,7 @@ function sendEmail(uEmail, token) {
         if (error) {
             console.log('Erro:', error);
         } else {
-            console.log('Email enviado:', info.response);
+            console.log('Email enviado:', uEmail);
         }
     });
 }
@@ -197,7 +197,6 @@ router.post('/2fa', async (req, res) => {
     }
 });
 
-
 // Endpoint de Listar usuarios - Somente Admnistradores
 router.get('/list', admin, async (req, res) => {
     try {
@@ -233,6 +232,22 @@ router.delete('/:id', admin, async (req, res) => {
         res.status(200).json({ message: 'Usuario deletado com sucesso!', deletedUser }); // Caso seja deletado, retornar mensagem e o usuario deletado
     } catch (error) { // Caso não funcione
         res.status(500).json({ error: 'Erro no servidor!' }); // Retornar erro 500, erro no servidor
+    }
+});
+
+// Endpoint para atualizar o usuario pelo ID
+router.put('/update/:id', auth, async (req, res) => {
+    const { id } = req.params; // Pegando o ID dos parametros
+    const updatedData = req.body; // Pegando os dados atualizados do corpo da requisição
+
+    try {
+        const updatedUser = await prisma.user.update({ // Atualizando o usuario no DB
+            where: { id: id }, // Onde o ID seja igual ao ID dos parametros
+            data: updatedData // Dados atualizados
+        });
+        res.status(200).json({ message: 'Usuario atualizado com sucesso!', updatedUser }); // Retornando mensagem de sucesso e o usuario atualizado
+    } catch (error) { // Caso não funcione
+        res.status(500).json({ error: 'Erro no servidor!' }); // Retornando erro 500, erro no servidor
     }
 });
 
