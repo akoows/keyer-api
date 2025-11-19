@@ -3,6 +3,7 @@ import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import usersRoute from './routes/users.js';
+import applicationsRoute from './routes/applications.js';
 import utilitiesRoutes from './routes/utilities.js';
 import { v2 as cloudinary } from 'cloudinary';
 
@@ -21,6 +22,7 @@ app.use(cors({ // Liberando o acesso via cors
 }))
 
 app.use('/users', usersRoute); // Rota de usuarios
+app.use('/applications', applicationsRoute); // Rota de aplicações
 app.use('/', utilitiesRoutes); // Rota de utilidades
 
 app.listen(process.env.PORT, () => { // Rodando o Servidor

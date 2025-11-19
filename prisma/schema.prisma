@@ -19,3 +19,14 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+// Modelo de Aplicacao
+model Application {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  hash        String   @unique
+  ownerId     String   @db.ObjectId
+  title       String
+  appTag      String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
